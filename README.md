@@ -1,0 +1,2 @@
+# bakery
+Hashicorp Packer magic
