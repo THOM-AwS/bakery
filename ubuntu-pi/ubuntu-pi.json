@@ -1,0 +1,66 @@
+{
+    "variables": {
+        "ssh_key_src": "{{env `HOME`}}/.ssh/id_ed25519.pub",
+        "image_home_dir": "/home/ubuntu"
+      },
+    "builders": [
+      {
+        "type": "arm-image",
+        "image_type": "raspberrypi",
+        "qemu_binary": "qemu-aarch64-static",
+        "iso_url": "https://cdimage.ubuntu.com/releases/20.04.3/release/ubuntu-20.04.3-preinstalled-server-arm64+raspi.img.xz",
+        "iso_checksum": "7e405f473d8a9e3254cd702edaeecd5509a85cde1e9e99e120f6c82156c6958f",
+        "target_image_size": 15032385536,
+        "image_mounts": ["/boot/firmware","/"],
+        "iso_target_path": "./output-arm-image/ubuntu-baked.img"
+      }
+    ],
+    "provisioners": [
+      {
+        "type": "shell",
+        "inline": [
+            "mv /etc/resolv.conf /etc/resolv.conf.bk",
+            "echo 'nameserver 1.1.1.1' > /etc/resolv.conf"
+        ]
+      },
+      {
+        "type": "shell",
+        "inline": [
+            "apt-get update",
+            "apt-get install -y python3-dev python3-opencv python3-wxgtk4.0 python3-pip python3-matplotlib python3-lxml python3-pygame",
+            "pip3 install PyYAML mavproxy --user",
+            "echo 'export PATH=$PATH:$HOME/.local/bin' >> ~/.bashrc",
+            "useradd -p $(openssl passwd -1 '{{user `password`}}') 'ubuntu'",
+            "echo 'network={' >> /etc/wpa_supplicant/wpa_supplicant.conf",
+            "echo '    ssid=\"{{user `wifi_name`}}\"' >> /etc/wpa_supplicant/wpa_supplicant.conf",
+            "echo '    psk=\"{{user `wifi_password`}}\"' >> /etc/wpa_supplicant/wpa_supplicant.conf",
+            "echo '}' >> /etc/wpa_supplicant/wpa_supplicant.conf"
+        ]
+      },
+      {
+        "type": "shell",
+        "inline": [
+            "mkdir -p {{user `image_home_dir`}}/.ssh"
+        ]
+      },
+      {
+        "type": "file",
+        "source": "{{user `ssh_key_src`}}",
+        "destination": "{{user `image_home_dir`}}/.ssh/authorized_keys"
+      },
+      {
+        "type": "shell",
+        "inline": [
+          "touch /boot/ssh"
+        ]
+      },
+      {
+        "type": "shell",
+        "inline": [
+          "sed '/PasswordAuthentication/d' -i /etc/ssh/sshd_config",
+          "echo >> /etc/ssh/sshd_config",
+          "echo 'PasswordAuthentication no' >> /etc/ssh/sshd_config"
+        ]
+      }
+    ]
+  }

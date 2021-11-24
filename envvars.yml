@@ -1,0 +1,3 @@
+envvars:
+  - name: SUBFOLDER
+    desc: SUBFOLDER to switch to
